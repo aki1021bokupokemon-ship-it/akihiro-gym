@@ -1,4 +1,16 @@
 {
-"name":"あきひろ GYM LOG","short_name":"GYM LOG","start_url":"./index.html","display":"standalone",
-"background_color":"#0b1020","theme_color":"#0b1020","lang":"ja","description":"あきひろ用筋トレ記録アプリ"
+  "name": "あきひろ GYM LOG",
+  "short_name": "GYM LOG",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "icons": [
+    {
+      "src": "./E373A8D3-6EC3-4BF4-9A71-5251755930D3.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
