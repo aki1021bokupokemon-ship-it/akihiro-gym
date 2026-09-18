@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GYM LOG">
+<link rel="manifest" href="manifest.webmanifest">
+<title>あきひろ GYM LOG</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1020;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:760px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(80px + env(safe-area-inset-bottom))}
+h1{font-size:25px;margin:5px 0}.sub,.muted{color:#94a3b8}.card{background:#151c2f;border:1px solid #2b3858;border-radius:20px;padding:15px;margin:13px 0}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding:5px 0 10px}.tab{flex:0 0 auto;border:0;border-radius:999px;padding:10px 14px;background:#26324d;color:#fff;font-weight:700}.tab.on{background:#2563eb}
+label{display:block;font-size:12px;color:#aab5ca;margin:9px 0 5px}select,input,button{font:inherit;color:#fff;background:#0f172a;border:1px solid #344564;border-radius:12px;padding:12px;width:100%}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.primary{background:#2563eb;border:0;font-weight:800;margin-top:12px}.green{background:#15803d;border:0;font-weight:700}
+.entry{border-bottom:1px solid #293650;padding:10px 0}.entry:last-child{border:0}.metric{font-size:25px;font-weight:900}.progress{height:10px;background:#293650;border-radius:20px;overflow:hidden}.bar{height:100%;background:#22c55e}
+canvas{width:100%;height:170px;background:#0f172a;border-radius:12px}.row{display:flex;gap:8px}.row>*{flex:1}.badge{font-size:12px;background:#7c3aed;padding:4px 8px;border-radius:999px}
+</style></head>
+<body><main>
+<h1>🏋️ あきひろ GYM LOG <span class="badge">1.0</span></h1>
+<p class="sub">記録 → 成長確認 → ChatGPTに共有。</p>
+<section class="card">
+<div class="tabs" id="tabs">
+<button class="tab on" data-cat="胸">胸</button><button class="tab" data-cat="背中">背中</button><button class="tab" data-cat="肩">肩</button>
+<button class="tab" data-cat="二頭">二頭</button><button class="tab" data-cat="三頭">三頭</button><button class="tab" data-cat="脚">脚</button>
+<button class="tab" data-cat="腹">腹</button><button class="tab" data-cat="追加">＋追加</button>
+</div>
+<label>種目</label><select id="exercise"></select>
+<div id="custom" hidden><label>新しい種目</label><div class="row"><input id="customName" placeholder="例：ケーブルフライ"><button id="addCustom">追加</button></div></div>
+<div class="grid"><div><label>重量 kg</label><input id="weight" type="number" step=".5" inputmode="decimal"></div><div><label>回数</label><input id="reps" type="number" inputmode="numeric"></div></div>
+<div class="grid"><div><label>セット</label><input id="sets" type="number" value="1" inputmode="numeric"></div><div><label>日付</label><input id="date" type="date"></div></div>
+<label>メモ</label><input id="note" placeholder="フォーム、RIRなど"><button id="save" class="primary">記録する 🔥</button>
+</section>
+<section class="card"><b>ベンチプレス</b><div class="grid" style="margin-top:12px"><div><div class="metric" id="one">—</div><div class="muted">推定1RM</div></div><div><div class="metric" id="next">—</div><div class="muted">次回目安</div></div></div>
+<p class="muted" id="benchmsg">ベンチを記録すると更新。</p><div class="progress"><div class="bar" id="bar"></div></div><p class="muted" id="goal">年末60kg目標</p><canvas id="chart" width="700" height="170"></canvas></section>
+<section class="card"><div class="row"><b>今日の記録</b><button id="copy" class="green">ChatGPT用コピー 🤖</button></div><div id="today"></div></section>
+<section class="card"><b>履歴</b><div id="history"></div></section>
+<section class="card"><b>データ管理</b><p class="muted">端末内保存。機種変更前などはバックアップ推奨。</p><div class="grid"><button id="backup">バックアップ</button><button id="restoreBtn">復元</button></div><input hidden id="restore" type="file" accept=".json"></section>
+</main>
+<script>
+const EX={"胸":["ベンチプレス","インクラインDBプレス","チェストプレス","ワイドチェストプレス","ペックフライ","ディップス"],"背中":["ラットプルダウン","シーテッドロー","アイソラテラルロー","懸垂"],"肩":["ラテラルレイズマシン","DBサイドレイズ","リアデルト"],"二頭":["アームカール","プリーチャーカール","インクラインカール"],"三頭":["ケーブルプレスダウン","DBオーバーヘッド・トライセプスエクステンション"],"脚":["レッグプレス","レッグエクステンション","レッグカール"],"腹":["アブドミナル","アブローラー"]};
+const $=x=>document.getElementById(x);let cat="胸",logs=JSON.parse(localStorage.getItem("akihiroLogs")||"[]"),custom=JSON.parse(localStorage.getItem("akihiroCustom")||"[]");
+$("date").value=new Date().toISOString().slice(0,10);
+function opts(){ $("custom").hidden=cat!=="追加"; let a=cat==="追加"?custom:EX[cat]; $("exercise").innerHTML=a.length?a.map(x=>`<option>${x}</option>`).join(""):"<option>種目を追加してください</option>"}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{cat=b.dataset.cat;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));opts()});
+$("addCustom").onclick=()=>{let n=$("customName").value.trim();if(n&&!custom.includes(n)){custom.push(n);localStorage.setItem("akihiroCustom",JSON.stringify(custom));$("customName").value="";opts();$("exercise").value=n}};
+const er=l=>l.weight*(1+l.reps/30),fmt=n=>Number.isInteger(n)?n:n.toFixed(1);
+$("save").onclick=()=>{let w=+$("weight").value,r=+$("reps").value,s=+$("sets").value,e=$("exercise").value;if(!e||e.startsWith("種目を")||r<1||s<1||w<0){alert("入力を確認してね");return}logs.push({id:Date.now(),date:$("date").value,cat:cat==="追加"?"その他":cat,e,w:r? w:0,r,s,n:$("note").value.trim()});localStorage.setItem("akihiroLogs",JSON.stringify(logs));$("reps").value="";$("sets").value=1;$("note").value="";render()};
+function bench(){let b=logs.filter(x=>x.e==="ベンチプレス").sort((a,b)=>a.id-b.id);if(!b.length){$("one").textContent=$("next").textContent="—";$("bar").style.width="0";draw([]);return}let l=b.at(-1),est=er({weight:l.w,reps:l.r});$("one").textContent=fmt(est)+"kg";let nw=l.w,nr=l.r+1,msg=`直近 ${fmt(l.w)}kg × ${l.r}回`;if(l.r>=8){nw+=2.5;nr=3;msg+=" → +2.5kg候補🔥"}else if(l.r>=5)msg+=" → 同重量で回数更新";else msg+=" → まず1回更新";$("next").textContent=`${fmt(nw)}kg×${nr}`;$("benchmsg").textContent=msg;let vals=b.map(x=>x.w*(1+x.r/30)),best=Math.max(...vals),p=Math.min(100,best/60*100);$("bar").style.width=p+"%";$("goal").textContent=`年末60kg目標：推定1RMベスト ${fmt(best)}kg（${Math.round(p)}%）`;draw(vals)}
+function draw(vals){let c=$("chart"),x=c.getContext("2d"),w=c.width,h=c.height;x.clearRect(0,0,w,h);x.strokeStyle="#334155";for(let i=1;i<4;i++){let y=h*i/4;x.beginPath();x.moveTo(25,y);x.lineTo(w-15,y);x.stroke()}if(!vals.length)return;let mn=Math.max(0,Math.min(...vals)-5),mx=Math.max(60,Math.max(...vals)+3);x.strokeStyle="#60a5fa";x.lineWidth=4;x.beginPath();vals.forEach((v,i)=>{let px=35+(w-60)*(vals.length===1?.5:i/(vals.length-1)),py=h-18-(h-36)*(v-mn)/(mx-mn);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
+function render(){let d=$("date").value,t=logs.filter(x=>x.date===d);$("today").innerHTML=t.length?t.map(x=>`<div class="entry"><b>${x.e}</b>　${fmt(x.w)}kg × ${x.r}回 × ${x.s}set</div>`).join(""):'<p class="muted">まだ記録なし。</p>';$("history").innerHTML=logs.length?[...logs].reverse().slice(0,50).map(x=>`<div class="entry"><span class="muted">${x.date}・${x.cat}</span><br><b>${x.e}</b>　${fmt(x.w)}kg × ${x.r}回 × ${x.s}set</div>`).join(""):'<p class="muted">まだ記録なし。</p>';bench()}
+$("copy").onclick=async()=>{let t=logs.filter(x=>x.date===$("date").value);if(!t.length)return alert("今日の記録がないよ");let s=`あきひろの筋トレ記録\n日付: ${$("date").value}\n\n`+t.map(x=>`・${x.e}: ${fmt(x.w)}kg × ${x.r}回 × ${x.s}set${x.n?" / "+x.n:""}`).join("\n")+`\n\n評価して、次回の重量・回数を提案して。`;try{await navigator.clipboard.writeText(s);alert("コピーした！🤖")}catch{prompt("コピーしてChatGPTへ",s)}};
+$("backup").onclick=()=>{let a=document.createElement("a"),u=URL.createObjectURL(new Blob([JSON.stringify({logs,custom},null,2)],{type:"application/json"}));a.href=u;a.download="akihiro-gym-backup.json";a.click();URL.revokeObjectURL(u)};
+$("restoreBtn").onclick=()=>$("restore").click();$("restore").onchange=async e=>{try{let d=JSON.parse(await e.target.files[0].text());logs=d.logs||[];custom=d.custom||[];localStorage.setItem("akihiroLogs",JSON.stringify(logs));localStorage.setItem("akihiroCustom",JSON.stringify(custom));opts();render();alert("復元した！")}catch{alert("読み込めなかった")}};
+$("date").onchange=render;opts();render();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script></body></html>
